@@ -315,6 +315,10 @@ public final class PlayerManager {
         return players.size() >= resolvePlayerLimit();
     }
 
+    public boolean isTrackedOnline(UUID uuid) {
+        return uuid != null && players.containsKey(uuid);
+    }
+
     public List<SocketPlayerInfo> createSocketPlayerSnapshot() {
         List<SocketPlayerInfo> snapshot = new ArrayList<>();
         for (PowerPlayer powerPlayer : players.values()) {

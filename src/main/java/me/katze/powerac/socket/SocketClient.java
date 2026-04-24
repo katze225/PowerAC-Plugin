@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
@@ -66,6 +67,7 @@ public final class SocketClient {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final AtomicBoolean authenticated = new AtomicBoolean(false);
     private final AtomicBoolean reconnecting = new AtomicBoolean(false);
+    private final AtomicBoolean serverStateConfirmed = new AtomicBoolean(false);
 
     private volatile WebSocket webSocket;
     private volatile ScheduledFuture<?> reconnectFuture;
@@ -97,6 +99,7 @@ public final class SocketClient {
         }
         manualDisconnect.set(false);
         authenticated.set(false);
+        serverStateConfirmed.set(false);
         socketAuthInfo = null;
         if (!hasConfiguredApiKey()) {
             handleMissingApiKey();
@@ -109,6 +112,7 @@ public final class SocketClient {
         manualDisconnect.set(false);
         running.set(true);
         reconnecting.set(false);
+        serverStateConfirmed.set(false);
         socketAuthInfo = null;
         consecutiveFailures = 0;
         cancelReconnect();
@@ -125,6 +129,7 @@ public final class SocketClient {
     public void disconnect() {
         manualDisconnect.set(true);
         authenticated.set(false);
+        serverStateConfirmed.set(false);
         socketAuthInfo = null;
         running.set(false);
         reconnecting.set(false);
@@ -145,6 +150,18 @@ public final class SocketClient {
 
     public boolean isAuthenticated() {
         return authenticated.get();
+    }
+
+    public boolean isServerStateConfirmed() {
+        return serverStateConfirmed.get();
+    }
+
+    public boolean canSendAiCheck(UUID playerUuid) {
+        return authenticated.get() &&
+        serverStateConfirmed.get() &&
+        playerUuid != null &&
+        plugin.getPlayerManager() != null &&
+        plugin.getPlayerManager().isTrackedOnline(playerUuid);
     }
 
     public String getPlan() {
@@ -282,6 +299,7 @@ public final class SocketClient {
         consecutiveFailures = 0;
         reconnecting.set(false);
         authenticated.set(true);
+        serverStateConfirmed.set(false);
         socketAuthInfo = authInfo;
         lastPongAtMs = System.currentTimeMillis();
         if (authInfo.getPlayerLimit() != null) {
@@ -297,7 +315,7 @@ public final class SocketClient {
             }
         }
 
-        plugin.getLogger().info("[PowerAC] Socket connected and authenticated.");
+        plugin.getLogger().info("Socket connected and authenticated.");
         startHeartbeat();
         syncServerState();
         flushQueue();
@@ -305,12 +323,14 @@ public final class SocketClient {
 
     public void handleAuthError(String message) {
         authenticated.set(false);
+        serverStateConfirmed.set(false);
         socketAuthInfo = null;
-        plugin.getLogger().severe("[PowerAC] Socket authentication failed: " + message);
+        plugin.getLogger().severe("Socket authentication failed: " + message);
     }
 
     public void handleServerStatusOk(int playerLimit, int requestsPerHour) {
         this.setPlayerLimit(playerLimit);
+        serverStateConfirmed.set(true);
     }
 
     public void handlePong() {
@@ -401,6 +421,7 @@ public final class SocketClient {
             return;
         }
         authenticated.set(false);
+        serverStateConfirmed.set(false);
         failAllPending("reconnecting");
         queue.clear();
         cancelHeartbeat();
@@ -410,7 +431,7 @@ public final class SocketClient {
         plugin
             .getLogger()
             .warning(
-                "[PowerAC] Socket reconnect scheduled in " +
+                "Socket reconnect scheduled in " +
                 reconnectDelaySeconds +
                 "s (failures=" +
                 consecutiveFailures +
@@ -510,7 +531,7 @@ public final class SocketClient {
             plugin
                 .getLogger()
                 .warning(
-                    "[PowerAC] Socket endpoint returned HTTP " +
+                    "Socket endpoint returned HTTP " +
                     response.code() +
                     (response.message() == null || response.message().trim().isEmpty()
                         ? ""
@@ -525,7 +546,7 @@ public final class SocketClient {
         plugin
             .getLogger()
             .warning(
-                "[PowerAC] Socket failure: " +
+                "Socket failure: " +
                 message +
                 " (endpoint_ip=" + resolveEndpointIp() +
                 ", account_id=" + getAccountIdOrUnknown() + ")"
@@ -593,12 +614,13 @@ public final class SocketClient {
                 return;
             }
             authenticated.set(false);
+            serverStateConfirmed.set(false);
             socketAuthInfo = null;
             lastPongAtMs = System.currentTimeMillis();
             plugin
                 .getLogger()
                 .info(
-                    "[PowerAC] Socket opened: endpoint_ip=" +
+                    "Socket opened: endpoint_ip=" +
                     resolveEndpointIp()
                 );
             sendAuth(webSocket);
@@ -623,7 +645,7 @@ public final class SocketClient {
                 plugin
                     .getLogger()
                     .warning(
-                        "[PowerAC] Failed to process socket message: " +
+                        "Failed to process socket message: " +
                         exception.getMessage()
                     );
             }
@@ -635,13 +657,14 @@ public final class SocketClient {
                 return;
             }
             authenticated.set(false);
+            serverStateConfirmed.set(false);
             socketAuthInfo = null;
             cancelHeartbeat();
             if (!manualDisconnect.get()) {
                 plugin
                     .getLogger()
                     .warning(
-                        "[PowerAC] Socket closed: code=" +
+                        "Socket closed: code=" +
                         code +
                         ", reason=" +
                         (reason == null || reason.trim().isEmpty()
@@ -667,6 +690,7 @@ public final class SocketClient {
                 return;
             }
             authenticated.set(false);
+            serverStateConfirmed.set(false);
             socketAuthInfo = null;
             cancelHeartbeat();
             if (!manualDisconnect.get()) {
@@ -689,6 +713,7 @@ public final class SocketClient {
 
     private void handleMissingApiKey() {
         authenticated.set(false);
+        serverStateConfirmed.set(false);
         socketAuthInfo = null;
         running.set(false);
         reconnecting.set(false);

@@ -88,12 +88,12 @@ public final class DiscordWebhookManager {
             try (Response response = httpClient.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
                     plugin.getLogger().warning(
-                        "[PowerAC] Discord webhook returned HTTP " + response.code()
+                        "Discord webhook returned HTTP " + response.code()
                     );
                 }
             } catch (Exception exception) {
                 plugin.getLogger().warning(
-                    "[PowerAC] Failed to send Discord webhook: " + exception.getMessage()
+                    "Failed to send Discord webhook: " + exception.getMessage()
                 );
             }
         });
@@ -152,7 +152,7 @@ public final class DiscordWebhookManager {
             return Integer.parseInt(normalized);
         } catch (NumberFormatException exception) {
             plugin.getLogger().warning(
-                "[PowerAC] Invalid Discord embed color '" + normalized + "', using default."
+                "Invalid Discord embed color '" + normalized + "', using default."
             );
             return 0x00A4FB;
         }

@@ -278,6 +278,10 @@ public final class RotationModule extends Module {
     }
 
     private void sendToSocket(List<AIRotationData> batch) {
+        if (!getPlugin().getSocketClient().canSendAiCheck(getPlayer().getUuid())) {
+            onRequestFinished();
+            return;
+        }
         String requestId = UUID.randomUUID().toString();
         String payload = buildAiPayload(requestId, batch);
         getPlugin().getSocketClient().sendMessage(
@@ -289,7 +293,7 @@ public final class RotationModule extends Module {
                     "error".equalsIgnoreCase(status)
                 ) {
                     getPlugin().getLogger().warning(
-                        "[PowerAC] Socket AI request for " +
+                        "Socket AI request for " +
                         (getPlayer().getName() == null ? "unknown" : getPlayer().getName()) +
                         " returned " +
                         status +
