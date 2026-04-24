@@ -4,10 +4,7 @@ Source code of the PowerAC Minecraft plugin.
 
 ## About
 
-PowerAC is a cloud-based Minecraft anti-cheat focused on detecting:
-
-- AIM modules
-- aim-assist style cheats
+PowerAC is a cloud-based Minecraft anti-cheat focused on detecting AIM modules and aim-assist style cheats.
 
 For other check categories such as Movement and BadPackets, we recommend using [LightningGrim](https://github.com/Axionize/LightningGrim).
 
