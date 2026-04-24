@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "me.katze"
-version = "1.5"
+version = "1.5.1"
 
 base {
     archivesName.set("PowerAC")
