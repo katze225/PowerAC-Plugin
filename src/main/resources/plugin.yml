@@ -1,0 +1,25 @@
+name: PowerAC
+main: me.katze.powerac.PowerAC
+version: ${version}
+api-version: 1.16
+authors: ["katze225 (tg @core2k21)"]
+folia-supported: true
+softdepend: [ViaVersion]
+commands:
+  powerac:
+    aliases: [pac]
+permissions:
+  powerac.alerts:
+    default: op
+  powerac.alerts-on-join:
+    default: op
+  powerac.reload:
+    default: op
+  powerac.player:
+    default: op
+  powerac.train:
+    default: op
+  powerac.status:
+    default: op
+  powerac.monitor:
+    default: op

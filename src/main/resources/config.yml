@@ -1,0 +1,120 @@
+# <---> 
+# To use the anti-cheat system, you need an API key, which you can obtain by creating an account on the website https://powerac.net
+# Support: https://discord.gg/EekyamUb99 or https://t.me/core2k21
+# <--->
+
+settings:
+  # Message prefix
+  prefix: "&#00A4FB&lᴘ&#009CFB&lᴏ&#0095FB&lᴡ&#008DFB&lᴇ&#0085FB&lʀ&#007EFB&lᴀ&#0076FB&lᴄ&f:"
+  # API key for AI (site: https://powerac.net)
+  apiKey: "YOUR_KEY_HERE"
+  # Show alerts in console?
+  console-alerts: true
+
+  esp:
+    # Hide armor enchantments from entity equipment packets while keeping enchanted glint.
+    hide-enchants: true
+    # Hide visible health values for other players.
+    hide-health: true
+    # Hide visible durability state from entity equipment packets.
+    hide-durability: true
+    # Hide stack count from entity equipment packets.
+    hide-count: true
+
+  violations:
+    # How often (in seconds) to clear players VL (0 - disable)
+    clear-interval-seconds: 1500
+    # Total VL required before punishment commands are executed.
+    max-vl: 3
+    # Commands executed after reaching maxVL.
+    # Placeholders: {player}, {uuid}, {module}, {reason}, {vl}, {added_vl}, {probability}, {total_vl}, {max_vl}.
+    punishment-commands:
+      - "kick {player} Cheating"
+
+  suspicious:
+    brands:
+      # Block clients with suspicious brand/version combinations.
+      block: true
+
+  performance:
+    # Disable rotation checks while TPS is below
+    min-tps-to-check: 18.0
+
+  private-model:
+    # Use your private PowerAC model instead of only the global one.
+    # Available only for Pro and Enterprice subscribers.
+    enabled: false
+    # When private-model is enabled, also check through the global model.
+    also-check-global: false
+
+  discord:
+    # Enable Discord webhook notifications for detections
+    enabled: false
+    # Sends on first detection and then on each multiple of this VL value (example: 3 -> 1, 3, 6, 9)
+    send-every-vl: 3
+    # Discord webhook URL
+    url: ""
+    # Embed color (#RRGGBB, 0xRRGGBB, or decimal)
+    embed-color: "#00A4FB"
+    # Embed title
+    embed-title: "PowerAC Detection"
+    # Embed description lines. Placeholders:
+    # {player}, {uuid}, {module}, {reason}, {vl}, {added_vl}, {total_vl}, {probability}, {detection_count}
+    content:
+      - "**Player:** {player}"
+      - "**UUID:** {uuid}"
+      - "**Module:** {module}"
+      - "**Reason:** {reason}"
+      - "**Probability:** {probability}"
+      - "**Added VL:** {added_vl}"
+      - "**Check VL:** {vl}"
+      - "**Total VL:** {total_vl}"
+      - "**Detection Count:** {detection_count}"
+
+messages:
+  player-limit-reached: "&cServer is full! Upgrade your PowerAC plan to allow more players."
+  suspicious-brand-kick: "&cSuspicious client brand detected. Brand: {brand}, version: {version}."
+  connection-lost: "&cPowerAC initialization in progress, please try again in a few seconds..."
+  no-permission: "{prefix} &cNo permission."
+  only-player: "{prefix} &cThis command can only be used by a player."
+  player-not-found: "{prefix} &cPlayer not found."
+  alerts-enabled: "{prefix} &aAlerts enabled."
+  alerts-disabled: "{prefix} &cAlerts disabled."
+  monitor-enabled: "{prefix} &aMonitor enabled for &f{player}&a."
+  monitor-disabled: "{prefix} &cMonitor disabled for &f{player}&c."
+  monitor-actionbar: "&bprobability: &f{probability}&7, &bdetected: &f{detected}&7, &bg: &f{global}&7, &bt: &f{time}&7, &bp: &f{player}"
+  reload: "{prefix} &aConfig reloaded."
+  socket-status-connected: "{prefix} &aConnected to socket server."
+  socket-status-disconnected: "{prefix} &cDisconnected from socket server."
+  player-info:
+    - "{prefix}"
+    - "&fName: &#00A4FB{player}"
+    - "&fUUID: &#00A4FB{uuid}"
+    - "&fVersion: &#00A4FB{version}"
+    - "&fBrand: &#00A4FB{brand}"
+    - "&fVL: &#00A4FB{vl}"
+  alert: "{prefix} &fPlayer &#00A4FB{player} &fflagged by &#00A4FB{module} &7(reason: {reason}, g: {global}, +vl: {added_vl}, total: {vl})"
+  train:
+    usage: "&fUsage: &#00A4FB/powerac train <legit|cheater> [true|false] &7- send rotation samples to training"
+    clear-usage: "&fUsage: &#00A4FB/powerac train clear &7- clear your trained model data"
+    stopped: "&aTraining session stopped."
+    cleared: "&aYour trained model data has been cleared."
+    only-legit-or-cheater: "&cLabel must be legit or cheater."
+    invalid-continuous: "&cContinuous must be true or false."
+    resolve-account-id: "&cFailed to resolve account ID."
+    access-denied: "&cYou account do not have access to /powerac train."
+    access-check-failed: "&cTraining access check failed: {details}"
+    clear-failed: "&cFailed to clear trained model: {details}"
+    already-running: "&cA training session is already running."
+    collecting-started: "&aCollecting {samples} samples started{mode}. account_id: &f{account_id}"
+    sent: "&aSent to training. Total batches sent: &f{count}"
+    sent-continuous: "&aSent to training. Collecting next rotation batch... Total batches sent: &f{count}"
+    error: "&cTraining error: {details}"
+  help:
+    - "{prefix}"
+    - "&#00A4FB/powerac player <name> &7- player info"
+    - "&#00A4FB/powerac alerts &7- enable/disable alerts"
+    - "&#00A4FB/powerac monitor [player] &7- monitor AI results in action bar"
+    - "&#00A4FB/powerac status &7- socket connection status"
+    - "&#00A4FB/powerac train <legit|cheater> [true|false] &7- send rotation samples to training"
+    - "&#00A4FB/powerac reload &7- reload config"
