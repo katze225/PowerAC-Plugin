@@ -1,9 +1,24 @@
-# PowerAC-Plugin
+# PowerAC
 
-PowerAC-Plugin is the source code of the PowerAC anti-cheat plugin.
+Source code of the PowerAC Minecraft plugin.
 
-Website: <https://powerac.net>
+## About
 
-Developed by `katze225 (tg @core2k21)`.
+PowerAC is a cloud-based Minecraft anti-cheat focused on detecting:
 
-Please read the license in `LICENSE.md`.
+- AIM modules
+- aim-assist style cheats
+
+For other check categories such as Movement and BadPackets, we recommend using [LightningGrim](https://github.com/Axionize/LightningGrim).
+
+## Links
+
+- Website: <https://powerac.net>
+
+## Author
+
+- `katze225 (tg @core2k21)`
+
+## License
+
+Please read `LICENSE.md` before using, modifying, or distributing this source code.
