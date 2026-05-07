@@ -118,6 +118,30 @@ public class FileLogManager {
         writeLine(line);
     }
 
+    public synchronized void logSuspiciousClientBlock(
+        PowerPlayer player,
+        String brand,
+        String version,
+        String message
+    ) {
+        if (!enabled) {
+            return;
+        }
+        String line =
+            formatPrefix("SUSPICIOUS_CLIENT") +
+            " player=" +
+            safe(player.getName()) +
+            " uuid=" +
+            player.getUuid() +
+            " brand=" +
+            safe(brand) +
+            " version=" +
+            safe(version) +
+            " message=" +
+            safe(message);
+        writeLine(line);
+    }
+
     private String formatPrefix(String type) {
         return "[" + LocalTime.now().format(TIME_FORMAT) + "] [" + type + "]";
     }

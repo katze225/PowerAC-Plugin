@@ -1,12 +1,18 @@
 package me.katze.powerac.manager;
 
+import com.github.retrooper.packetevents.protocol.ConnectionState;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.protocol.player.User;
+import com.github.retrooper.packetevents.wrapper.configuration.server.WrapperConfigServerDisconnect;
+import com.github.retrooper.packetevents.wrapper.login.server.WrapperLoginServerDisconnect;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerDisconnect;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.Getter;
@@ -21,12 +27,12 @@ import me.katze.powerac.object.socket.SocketPlayerInfo;
 import me.katze.powerac.tracker.impl.ActionTracker;
 import me.katze.powerac.tracker.impl.RotationTracker;
 import me.katze.powerac.utility.StringUtility;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import java.util.ArrayList;
-import java.util.List;
 
 @Getter
 public final class PlayerManager {
@@ -392,6 +398,15 @@ public final class PlayerManager {
                 player.getClientVersion() == null ? "unknown" : player.getClientVersion().toString()
             );
 
+        if (plugin.getFileLogManager() != null) {
+            plugin.getFileLogManager().logSuspiciousClientBlock(
+                player,
+                player.getBrand() == null ? "unknown" : player.getBrand(),
+                player.getClientVersion() == null ? "unknown" : player.getClientVersion().toString(),
+                StringUtility.strip(StringUtility.getString(resolvedMessage))
+            );
+        }
+
         kickUser(player, resolvedMessage);
     }
 
@@ -405,15 +420,54 @@ public final class PlayerManager {
         }
 
         String message = StringUtility.getString(rawMessage == null ? "" : rawMessage);
-        plugin.getTaskScheduler().runPlayer(player.getUuid(), () -> {
-            Player bukkitPlayer = Bukkit.getPlayer(player.getUuid());
-            if (bukkitPlayer != null && bukkitPlayer.isOnline()) {
-                bukkitPlayer.kickPlayer(message);
-            }
-        });
+        disconnectWithReason(user, message);
+    }
 
-        user.sendMessage(message);
-        user.closeConnection();
+    private void disconnectWithReason(User user, String message) {
+        Player bukkitPlayer = user.getUUID() == null ? null : Bukkit.getPlayer(user.getUUID());
+        if (bukkitPlayer != null && bukkitPlayer.isOnline()) {
+            plugin.getTaskScheduler().runPlayer(
+                bukkitPlayer.getUniqueId(),
+                () -> {
+                    if (bukkitPlayer.isOnline()) {
+                        bukkitPlayer.kickPlayer(message);
+                    }
+                }
+            );
+            return;
+        }
+
+        ConnectionState state = user.getEncoderState();
+        if (state == null) {
+            state = user.getDecoderState();
+        }
+
+        Component reason = LegacyComponentSerializer.legacySection().deserialize(message);
+        try {
+            if (state == ConnectionState.PLAY) {
+                user.sendPacket(new WrapperPlayServerDisconnect(reason));
+            } else if (state == ConnectionState.CONFIGURATION) {
+                user.sendPacket(new WrapperConfigServerDisconnect(reason));
+            } else {
+                user.sendPacket(new WrapperLoginServerDisconnect(reason));
+            }
+            user.flushPackets();
+        } catch (Exception exception) {
+            plugin
+                .getLogger()
+                .warning(
+                    "Failed to send disconnect reason to player " +
+                    safePlayerName(user) +
+                    ": " +
+                    exception.getMessage()
+                );
+        } finally {
+            user.closeConnection();
+        }
+    }
+
+    private String safePlayerName(User user) {
+        return user == null || user.getName() == null ? "unknown" : user.getName();
     }
 
     private PowerPlayer createPowerPlayer(UUID uuid, String name, User user, int entityId) {
