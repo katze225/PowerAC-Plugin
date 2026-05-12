@@ -33,6 +33,7 @@ public final class RotationModule extends Module {
     private final List<AIRotationData> trainingSamples = new ArrayList<>();
     private int trainingLabel = -1;
     private Consumer<String> trainingNotifier;
+    private CommandSender trainingSender;
     private boolean continuousTraining;
     private boolean inFlight;
     private boolean queued;
@@ -114,7 +115,7 @@ public final class RotationModule extends Module {
                                         .getConfigManager()
                                         .getTrainMessage(
                                             "access-denied",
-                                            "&cYou account do not have access to /powerac train."
+                                            "&cYour account does not have access to /powerac train."
                                         )
                                 )
                             );
@@ -147,6 +148,7 @@ public final class RotationModule extends Module {
                             queued = false;
                             trainingLabel = label;
                             trainingSentBatches = 0;
+                            trainingSender = sender;
                             trainingNotifier = message ->
                                 sender.sendMessage(StringUtility.getString(message));
                             continuousTraining = continuous;
@@ -200,6 +202,7 @@ public final class RotationModule extends Module {
             continuousTraining = false;
             trainingLabel = -1;
             trainingSentBatches = 0;
+            trainingSender = null;
             trainingNotifier = null;
             return true;
         }
@@ -385,9 +388,11 @@ public final class RotationModule extends Module {
             payload,
             (status, detected, probability, limitReached, reason, checkUuid, results) -> {
                 Consumer<String> notifier;
+                CommandSender sender;
                 boolean restart;
                 synchronized (lock) {
                     notifier = trainingNotifier;
+                    sender = trainingSender;
                     restart = continuousTraining;
                     trainingInFlight = false;
                     trainingSentBatches += "ok".equalsIgnoreCase(status) || "queued".equalsIgnoreCase(status) ? 1 : 0;
@@ -399,6 +404,7 @@ public final class RotationModule extends Module {
                     } else {
                         trainingActive = false;
                         trainingLabel = -1;
+                        trainingSender = null;
                         trainingNotifier = null;
                         continuousTraining = false;
                     }
@@ -406,7 +412,7 @@ public final class RotationModule extends Module {
                 if (notifier == null) {
                     return;
                 }
-                runTrainingNotifier(notifier, restart, status, reason);
+                runTrainingNotifier(sender, notifier, restart, status, reason);
             }
         );
     }
@@ -504,6 +510,7 @@ public final class RotationModule extends Module {
     }
 
     private void runTrainingNotifier(
+        CommandSender sender,
         Consumer<String> notifier,
         boolean restart,
         String status,
@@ -543,6 +550,7 @@ public final class RotationModule extends Module {
                 trainingInFlight = false;
                 trainingLabel = -1;
                 trainingSentBatches = 0;
+                trainingSender = null;
                 trainingNotifier = null;
                 continuousTraining = false;
             }
@@ -554,7 +562,7 @@ public final class RotationModule extends Module {
             );
         };
 
-        getPlugin().getTaskScheduler().runPlayer(getPlayer().getUuid(), task);
+        runOnSender(sender, task);
     }
 
     private void runOnSender(CommandSender sender, Runnable task) {

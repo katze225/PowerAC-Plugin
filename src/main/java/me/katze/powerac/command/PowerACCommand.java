@@ -8,6 +8,7 @@ import co.aikar.commands.annotation.Default;
 import co.aikar.commands.annotation.Description;
 import co.aikar.commands.annotation.Optional;
 import co.aikar.commands.annotation.Subcommand;
+import java.util.Locale;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import me.katze.powerac.PowerAC;
@@ -121,96 +122,232 @@ public final class PowerACCommand extends BaseCommand {
     @CommandPermission("powerac.train")
     public void onTrain(
         CommandSender sender,
-        @Optional String labelRaw,
-        @Optional String continuousRaw
+        @Optional String firstArg,
+        @Optional String secondArg,
+        @Optional String thirdArg
     ) {
         if (isNotAuthenticated(sender)) {
             return;
         }
 
-        PowerPlayer target = null;
-        if (sender instanceof Player) {
-            target = playerManager.get(((Player) sender).getUniqueId());
-        }
-        RotationModule rotationModule = target != null ? target.getRotationModule() : null;
-        if (target == null || rotationModule == null) {
-            sender.sendMessage(
-                StringUtility.getString("&cThis command can only be used by an in-game player.")
-            );
-            return;
-        }
-
-        if (labelRaw == null) {
-            if (rotationModule.stopTrainingSession()) {
-                sender.sendMessage(
-                    StringUtility.getString(
-                        plugin.getConfigManager().getTrainMessage("stopped", "&aTraining session stopped.")
-                    )
-                );
+        String first = normalizeTrainArgument(firstArg);
+        String second = normalizeTrainArgument(secondArg);
+        String third = normalizeTrainArgument(thirdArg);
+        String firstLower = toLowerCase(first);
+        String secondLower = toLowerCase(second);
+        String thirdLower = toLowerCase(third);
+        if (first == null) {
+            if (!(sender instanceof Player)) {
+                sendTrainUsage(sender);
                 return;
             }
-            sender.sendMessage(
-                StringUtility.getString(
-                    plugin
-                        .getConfigManager()
-                        .getTrainMessage(
-                            "usage",
-                            "&fUsage: &#00A4FB/powerac train <legit|cheater> [true|false] &7- send rotation samples to training"
-                        )
-                )
-            );
-            return;
-        }
 
-        String normalizedLabel = labelRaw.trim().toLowerCase();
-        if ("clear".equals(normalizedLabel)) {
-            rotationModule.stopTrainingSession();
-            rotationModule.clearTrainingData(sender);
-            return;
-        }
-        int label;
-        if ("legit".equals(normalizedLabel)) {
-            label = 0;
-        } else if ("cheater".equals(normalizedLabel)) {
-            label = 1;
-        } else {
-            sender.sendMessage(
-                StringUtility.getString(
-                    plugin
-                        .getConfigManager()
-                        .getTrainMessage("only-legit-or-cheater", "&cLabel must be legit or cheater.")
-                )
-            );
-            return;
-        }
-
-        boolean continuous = false;
-        if (continuousRaw != null) {
-            String normalizedContinuous = continuousRaw.trim().toLowerCase();
-            if ("true".equals(normalizedContinuous)) {
-                continuous = true;
-            } else if (!normalizedContinuous.isEmpty() && !"false".equals(normalizedContinuous)) {
-                sender.sendMessage(
-                    StringUtility.getString(
-                        plugin
-                            .getConfigManager()
-                            .getTrainMessage("invalid-continuous", "&cContinuous must be true or false.")
-                    )
-                );
+            RotationModule selfRotationModule = getSenderRotationModule(sender);
+            if (selfRotationModule == null) {
+                sendOnlyPlayerMessage(sender);
                 return;
             }
-        }
-
-        if (rotationModule.stopTrainingSession()) {
-            sender.sendMessage(
-                StringUtility.getString(
-                    plugin.getConfigManager().getTrainMessage("stopped", "&aTraining session stopped.")
-                )
-            );
+            if (selfRotationModule.stopTrainingSession()) {
+                sendTrainMessage(sender, "stopped", "&aTraining session stopped.");
+                return;
+            }
+            sendTrainUsage(sender);
             return;
         }
 
-        rotationModule.startTrainingSession(sender, label, continuous);
+        if ("clear".equals(firstLower)) {
+            if (second != null || third != null) {
+                sendTrainClearUsage(sender);
+                return;
+            }
+
+            RotationModule selfRotationModule = getSenderRotationModule(sender);
+            if (selfRotationModule == null) {
+                sendOnlyPlayerMessage(sender);
+                return;
+            }
+            selfRotationModule.stopTrainingSession();
+            selfRotationModule.clearTrainingData(sender);
+            return;
+        }
+
+        if ("stop".equals(firstLower)) {
+            if (third != null) {
+                sendTrainStopUsage(sender);
+                return;
+            }
+
+            RotationModule targetRotationModule = second == null
+                ? getSenderRotationModule(sender)
+                : getRotationModuleByName(sender, second);
+            if (targetRotationModule == null) {
+                if (second == null) {
+                    sendTrainStopUsage(sender);
+                }
+                return;
+            }
+            if (targetRotationModule.stopTrainingSession()) {
+                sendTrainMessage(sender, "stopped", "&aTraining session stopped.");
+                return;
+            }
+            sendTrainMessage(sender, "not-running", "&cNo training session is currently running.");
+            return;
+        }
+
+        if (isTrainingLabel(firstLower)) {
+            if (third != null) {
+                sendTrainUsage(sender);
+                return;
+            }
+
+            RotationModule selfRotationModule = getSenderRotationModule(sender);
+            if (selfRotationModule == null) {
+                sendOnlyPlayerMessage(sender);
+                return;
+            }
+
+            Boolean continuous = parseContinuous(sender, secondLower);
+            if (continuous == null) {
+                return;
+            }
+
+            if (selfRotationModule.stopTrainingSession()) {
+                sendTrainMessage(sender, "stopped", "&aTraining session stopped.");
+                return;
+            }
+            selfRotationModule.startTrainingSession(sender, parseLabel(firstLower), continuous.booleanValue());
+            return;
+        }
+
+        RotationModule targetRotationModule = getRotationModuleByName(sender, first);
+        if (targetRotationModule == null) {
+            return;
+        }
+        if (!isTrainingLabel(secondLower)) {
+            sendTrainUsage(sender);
+            return;
+        }
+
+        Boolean continuous = parseContinuous(sender, thirdLower);
+        if (continuous == null) {
+            return;
+        }
+
+        if (targetRotationModule.stopTrainingSession()) {
+            sendTrainMessage(sender, "stopped", "&aTraining session stopped.");
+            return;
+        }
+        targetRotationModule.startTrainingSession(sender, parseLabel(secondLower), continuous.booleanValue());
+    }
+
+    private RotationModule getSenderRotationModule(CommandSender sender) {
+        if (!(sender instanceof Player)) {
+            return null;
+        }
+
+        PowerPlayer powerPlayer = playerManager.get(((Player) sender).getUniqueId());
+        if (powerPlayer == null) {
+            return null;
+        }
+        return powerPlayer.getRotationModule();
+    }
+
+    private RotationModule getRotationModuleByName(CommandSender sender, String playerName) {
+        Player target = Bukkit.getPlayerExact(playerName);
+        if (target == null) {
+            sender.sendMessage(
+                StringUtility.getString(
+                    plugin.getConfigManager().getMessage("player-not-found", "")
+                )
+            );
+            return null;
+        }
+
+        PowerPlayer powerPlayer = playerManager.get(target.getUniqueId());
+        if (powerPlayer == null || powerPlayer.getRotationModule() == null) {
+            sender.sendMessage(
+                StringUtility.getString(
+                    plugin.getConfigManager().getMessage("player-not-found", "")
+                )
+            );
+            return null;
+        }
+        return powerPlayer.getRotationModule();
+    }
+
+    private Boolean parseContinuous(CommandSender sender, String value) {
+        if (value == null) {
+            return Boolean.FALSE;
+        }
+
+        if ("true".equals(value)) {
+            return Boolean.TRUE;
+        }
+        if ("false".equals(value)) {
+            return Boolean.FALSE;
+        }
+
+        sendTrainMessage(sender, "invalid-continuous", "&cContinuous must be true or false.");
+        return null;
+    }
+
+    private boolean isTrainingLabel(String value) {
+        return "legit".equals(value) || "cheater".equals(value);
+    }
+
+    private int parseLabel(String value) {
+        return "cheater".equals(value) ? 1 : 0;
+    }
+
+    private String normalizeTrainArgument(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String toLowerCase(String value) {
+        return value == null ? null : value.toLowerCase(Locale.ROOT);
+    }
+
+    private void sendOnlyPlayerMessage(CommandSender sender) {
+        sender.sendMessage(
+            StringUtility.getString(
+                plugin.getConfigManager().getMessage("only-player", "")
+            )
+        );
+    }
+
+    private void sendTrainUsage(CommandSender sender) {
+        sendTrainMessage(
+            sender,
+            "usage",
+            "&fUsage: &#00A4FB/powerac train <legit|cheater> [true|false] &7or &#00A4FB/powerac train <player> <legit|cheater> [true|false]"
+        );
+    }
+
+    private void sendTrainStopUsage(CommandSender sender) {
+        sendTrainMessage(
+            sender,
+            "stop-usage",
+            "&fUsage: &#00A4FB/powerac train stop [player] &7- stop an active training session"
+        );
+    }
+
+    private void sendTrainClearUsage(CommandSender sender) {
+        sendTrainMessage(
+            sender,
+            "clear-usage",
+            "&fUsage: &#00A4FB/powerac train clear &7- clear your trained model data"
+        );
+    }
+
+    private void sendTrainMessage(CommandSender sender, String path, String fallback) {
+        sender.sendMessage(
+            StringUtility.getString(plugin.getConfigManager().getTrainMessage(path, fallback))
+        );
     }
 
     @Subcommand("monitor")
